@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose'; // ADD THIS IMPORT
 import Activity from '../models/Activity';
 import DailySummary from '../models/DailySummary';
-import User from '../models/User';
 import { auth } from '../middleware/auth';
 
 const router = Router();
@@ -9,116 +9,113 @@ const router = Router();
 // Sync user data
 router.post('/sync', auth, async (req: Request, res: Response) => {
   try {
-     console.log('🔵 SYNC REQUEST RECEIVED');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    const user = req.user;
-    const { activities, dailySummary, settings } = req.body;
+    const { activities, dailySummary, deviceId } = req.body;
+    const userId = req.user.id;
 
-    if (!user) {
-     console.log('❌ No user found in request');
-      return res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
-    }
+    console.log(`📊 Syncing data for user: ${userId}`);
+    console.log(`   Activities: ${activities?.length || 0}`);
+    console.log(`   Daily summary: ${dailySummary ? 'Yes' : 'No'}`);
+    console.log(`   Device ID: ${deviceId || 'not provided'}`);
 
-    // Update user settings if provided
-    if (settings) {
-    console.log('Updating user settings')
-      user.settings = { ...user.settings, ...settings };
-    }
-
-    // Update last sync time
-    user.lastSync = new Date();
-    await user.save();
-        console.log('✅ User saved with new lastSync:', user.lastSync);
-    let syncedActivities = 0;
-    let syncedSummary = false;
-
-    // Sync activities
-    if (activities && Array.isArray(activities)) {
-              console.log(`Processing ${activities.length} activities`);
-
-      for (const activity of activities) {
-        const syncId = `${user.id}-${activity.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Save activities if any
+    let savedActivities = 0;
+    if (activities && activities.length > 0) {
+      const activityDocs = activities.map((activity: any) => {
+        // Generate a unique syncId if not provided
+        const syncId = activity.syncId || 
+                       activity.extensionId || 
+                       activity.id || 
+                       `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
+        return {
+          userId: new mongoose.Types.ObjectId(userId),
+          url: activity.url || '',
+          title: activity.title || 'Unknown',
+          timestamp: activity.timestamp ? new Date(activity.timestamp) : new Date(),
+          domain: activity.domain || 'unknown',
+          category: activity.category || 'other',
+          duration: activity.duration || 0,
+          deviceId: deviceId || 'unknown',
+          extensionId: activity.extensionId || activity.id || null,
+          syncId: syncId, // Always provide a value
+          categoryInfo: activity.categoryInfo || {
+            emoji: '🌐',
+            color: '#6b7280',
+            name: 'Other'
+          },
+          createdAt: new Date()
+        };
+      });
+      
+      // Remove any existing activities with same extensionId to avoid duplicates
+      const extensionIds = activityDocs
+        .map((doc: any) => doc.extensionId)
+        .filter(Boolean);
+      
+      if (extensionIds.length > 0) {
+        await Activity.deleteMany({ 
+          userId, 
+          extensionId: { $in: extensionIds } 
+        });
+        console.log(`🗑️  Removed ${extensionIds.length} potential duplicates`);
+      }
+      
+      // Insert new activities
+      if (activityDocs.length > 0) {
         try {
-          await Activity.findOneAndUpdate(
-            { syncId },
-            {
-              userId: user.id,
-              deviceId: user.deviceId,
-              url: activity.url,
-              title: activity.title,
-              domain: activity.domain,
-              category: activity.category,
-              duration: activity.duration,
-              timestamp: new Date(activity.timestamp),
-              syncId
-            },
-            { upsert: true, new: true }
-          );
-          syncedActivities++;
-        } catch (error) {
-          console.error('Error syncing activity:', error);
+          await Activity.insertMany(activityDocs, { ordered: false }); // Continue on error
+          savedActivities = activityDocs.length;
+          console.log(`✅ Saved ${savedActivities} activities`);
+        } catch (bulkError: any) {
+          // Handle partial failures
+          if (bulkError.writeErrors) {
+            console.log(`⚠️  Some activities failed: ${bulkError.writeErrors.length} errors`);
+            savedActivities = activityDocs.length - bulkError.writeErrors.length;
+          }
+          console.log(`✅ Saved ${savedActivities} activities (with some errors)`);
         }
       }
     }
-
-    // Sync daily summary
+    
+    // Save daily summary if exists
+    let savedSummary = false;
     if (dailySummary) {
-              console.log('Processing daily summary');
-
       const today = new Date().toISOString().split('T')[0];
-      
-      try {
-        await DailySummary.findOneAndUpdate(
-          { userId: user.id, date: today },
-          {
-            userId: user.id,
-            date: today,
-            totalTime: dailySummary.totalTime || 0,
-            categories: dailySummary.categories || {
-              productive: 0,
-              social: 0,
-              entertainment: 0,
-              shopping: 0,
-              other: 0
-            }
-          },
-          { upsert: true, new: true }
-        );
-        syncedSummary = true;
-                console.log('✅ Daily summary synced');
-
-      } catch (error) {
-        console.error('Error syncing daily summary:', error);
-      }
+      await DailySummary.findOneAndUpdate(
+        { userId, date: today },
+        { 
+          ...dailySummary, 
+          userId, 
+          date: today, 
+          deviceId: deviceId || 'unknown' 
+        },
+        { upsert: true, new: true }
+      );
+      savedSummary = true;
+      console.log(`✅ Saved daily summary for ${today}`);
     }
 
     res.json({
       success: true,
       message: 'Data synced successfully',
+      timestamp: new Date().toISOString(),
       stats: {
-        activitiesSynced: syncedActivities,
-        summarySynced: syncedSummary,
-        lastSync: user.lastSync
+        totalActivities: activities?.length || 0,
+        savedActivities,
+        hasSummary: savedSummary
       }
     });
   } catch (error) {
-     console.error('❌ SYNC ERROR:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Sync error:', error);
+    console.error('❌ Sync error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to sync data',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-
+      details: error.message
     });
   }
 });
 
-// Get user data
+// Get dashboard data
 router.get('/dashboard', auth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
@@ -184,6 +181,57 @@ router.get('/dashboard', auth, async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch dashboard data'
+    });
+  }
+});
+
+// Get user activities
+router.get('/activities', auth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { limit = 50, skip = 0 } = req.query;
+
+    const activities = await Activity.find({ userId })
+      .sort({ timestamp: -1 })
+      .limit(Number(limit))
+      .skip(Number(skip));
+
+    res.json({
+      success: true,
+      activities
+    });
+  } catch (error) {
+    console.error('Get activities error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get activities'
+    });
+  }
+});
+
+// Get daily summaries
+router.get('/daily-summaries', auth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { days = 7 } = req.query;
+
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - Number(days));
+
+    const summaries = await DailySummary.find({
+      userId,
+      date: { $gte: dateLimit.toISOString().split('T')[0] }
+    }).sort({ date: -1 });
+
+    res.json({
+      success: true,
+      summaries
+    });
+  } catch (error) {
+    console.error('Get summaries error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get daily summaries'
     });
   }
 });

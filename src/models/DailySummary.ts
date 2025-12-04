@@ -1,8 +1,22 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const DailySummarySchema = new mongoose.Schema({
+export interface IDailySummary extends Document {
+  userId: mongoose.Types.ObjectId;
+  date: string; // YYYY-MM-DD format
+  totalTime: number; // in seconds
+  categories: {
+    productive: number;
+    social: number;
+    entertainment: number;
+    shopping: number;
+    other: number;
+  };
+  deviceId?: string;
+}
+
+const DailySummarySchema: Schema = new Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
@@ -12,6 +26,7 @@ const DailySummarySchema = new mongoose.Schema({
   },
   totalTime: {
     type: Number,
+    required: true,
     default: 0
   },
   categories: {
@@ -20,12 +35,16 @@ const DailySummarySchema = new mongoose.Schema({
     entertainment: { type: Number, default: 0 },
     shopping: { type: Number, default: 0 },
     other: { type: Number, default: 0 }
+  },
+  deviceId: {
+    type: String,
+    default: 'unknown'
   }
 }, {
   timestamps: true
 });
 
-// Composite unique index
+// Compound index for fast lookups
 DailySummarySchema.index({ userId: 1, date: 1 }, { unique: true });
 
-export default mongoose.models.DailySummary || mongoose.model('DailySummary', DailySummarySchema);
+export default mongoose.model<IDailySummary>('DailySummary', DailySummarySchema);
