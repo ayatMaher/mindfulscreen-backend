@@ -9,10 +9,13 @@ const router = Router();
 // Sync user data
 router.post('/sync', auth, async (req: Request, res: Response) => {
   try {
+     console.log('🔵 SYNC REQUEST RECEIVED');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     const user = req.user;
     const { activities, dailySummary, settings } = req.body;
 
     if (!user) {
+     console.log('❌ No user found in request');
       return res.status(401).json({
         success: false,
         error: 'User not authenticated'
@@ -21,18 +24,21 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
 
     // Update user settings if provided
     if (settings) {
+    console.log('Updating user settings')
       user.settings = { ...user.settings, ...settings };
     }
 
     // Update last sync time
     user.lastSync = new Date();
     await user.save();
-
+        console.log('✅ User saved with new lastSync:', user.lastSync);
     let syncedActivities = 0;
     let syncedSummary = false;
 
     // Sync activities
     if (activities && Array.isArray(activities)) {
+              console.log(`Processing ${activities.length} activities`);
+
       for (const activity of activities) {
         const syncId = `${user.id}-${activity.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
@@ -61,6 +67,8 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
 
     // Sync daily summary
     if (dailySummary) {
+              console.log('Processing daily summary');
+
       const today = new Date().toISOString().split('T')[0];
       
       try {
@@ -81,6 +89,8 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
           { upsert: true, new: true }
         );
         syncedSummary = true;
+                console.log('✅ Daily summary synced');
+
       } catch (error) {
         console.error('Error syncing daily summary:', error);
       }
@@ -96,10 +106,14 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
+     console.error('❌ SYNC ERROR:', error);
+    console.error('Error stack:', error.stack);
     console.error('Sync error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to sync data'
+      error: 'Failed to sync data',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+
     });
   }
 });

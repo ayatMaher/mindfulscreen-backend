@@ -23,7 +23,7 @@ const config = {
   mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/mindfulscreen',
   jwtSecret: process.env.JWT_SECRET || 'your_secret_key_change_this',
   jwtExpire: parseJwtExpire(process.env.JWT_EXPIRE || '30d'),
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '3002', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production'
 };
