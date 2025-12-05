@@ -6,10 +6,10 @@ dotenv.config();
 const parseJwtExpire = (expireString: string): number => {
   const match = expireString.match(/^(\d+)([smhd])$/);
   if (!match) return 2592000; // Default: 30 days in seconds
-  
+
   const value = parseInt(match[1]);
   const unit = match[2];
-  
+
   switch (unit) {
     case 's': return value; // seconds
     case 'm': return value * 60; // minutes

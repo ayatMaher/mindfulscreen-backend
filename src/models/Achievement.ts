@@ -20,10 +20,10 @@ const AchievementSchema: Schema = new Schema({
     type: String,
     required: true,
     enum: [
-      'productivity', 
-      'time_management', 
-      'focus', 
-      'streak', 
+      'productivity',
+      'time_management',
+      'focus',
+      'streak',
       'milestone'
     ]
   },

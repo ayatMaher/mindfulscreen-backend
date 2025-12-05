@@ -6,7 +6,7 @@ import { connectDB } from '../utils/database';
 import authRoutes from '../routes/auth';
 import dataRoutes from '../routes/data';
 import { config } from '../utils/config';
-import achievementRoutes from '../routes/achievements'; 
+import achievementRoutes from '../routes/achievements';
 
 
 const app = express();
@@ -66,10 +66,10 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use((error: any, req: any, res: any, next: any) => {
   console.error('Global error handler:', error);
-  
+
   const statusCode = error.statusCode || 500;
   const message = error.message || 'Internal Server Error';
-  
+
   res.status(statusCode).json({
     success: false,
     error: message,

@@ -16,21 +16,21 @@ export const auth = async (req: Request, res: Response, next: NextFunction): Pro
   try {
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ 
+      res.status(401).json({
         success: false,
-        error: 'No authentication token provided' 
+        error: 'No authentication token provided'
       });
       return;
     }
 
     const token = authHeader.replace('Bearer ', '');
     const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
-    
+
     const user = await User.findById(decoded.userId);
     if (!user) {
-      res.status(401).json({ 
+      res.status(401).json({
         success: false,
-        error: 'User not found' 
+        error: 'User not found'
       });
       return;
     }
@@ -39,21 +39,21 @@ export const auth = async (req: Request, res: Response, next: NextFunction): Pro
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    
+
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ 
+      res.status(401).json({
         success: false,
-        error: 'Invalid token' 
+        error: 'Invalid token'
       });
     } else if (error instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ 
+      res.status(401).json({
         success: false,
-        error: 'Token expired' 
+        error: 'Token expired'
       });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: 'Authentication failed' 
+        error: 'Authentication failed'
       });
     }
   }

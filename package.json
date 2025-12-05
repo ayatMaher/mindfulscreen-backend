@@ -11,7 +11,12 @@
     "vercel-dev": "npm run dev",
     "test": "echo \"No tests yet\" && exit 0"
   },
-  "keywords": ["chrome-extension", "productivity", "wellness", "tracking"],
+  "keywords": [
+    "chrome-extension",
+    "productivity",
+    "wellness",
+    "tracking"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {

@@ -23,11 +23,11 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
     if (activities && activities.length > 0) {
       const activityDocs = activities.map((activity: any) => {
         // Generate a unique syncId if not provided
-        const syncId = activity.syncId || 
-                       activity.extensionId || 
-                       activity.id || 
-                       `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+        const syncId = activity.syncId ||
+          activity.extensionId ||
+          activity.id ||
+          `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         return {
           userId: new mongoose.Types.ObjectId(userId),
           url: activity.url || '',
@@ -47,20 +47,20 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
           createdAt: new Date()
         };
       });
-      
+
       // Remove any existing activities with same extensionId to avoid duplicates
       const extensionIds = activityDocs
         .map((doc: any) => doc.extensionId)
         .filter(Boolean);
-      
+
       if (extensionIds.length > 0) {
-        await Activity.deleteMany({ 
-          userId, 
-          extensionId: { $in: extensionIds } 
+        await Activity.deleteMany({
+          userId,
+          extensionId: { $in: extensionIds }
         });
         console.log(`🗑️  Removed ${extensionIds.length} potential duplicates`);
       }
-      
+
       // Insert new activities
       if (activityDocs.length > 0) {
         try {
@@ -77,18 +77,18 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
         }
       }
     }
-    
+
     // Save daily summary if exists
     let savedSummary = false;
     if (dailySummary) {
       const today = new Date().toISOString().split('T')[0];
       await DailySummary.findOneAndUpdate(
         { userId, date: today },
-        { 
-          ...dailySummary, 
-          userId, 
-          date: today, 
-          deviceId: deviceId || 'unknown' 
+        {
+          ...dailySummary,
+          userId,
+          date: today,
+          deviceId: deviceId || 'unknown'
         },
         { upsert: true, new: true }
       );
@@ -96,18 +96,18 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
       console.log(`✅ Saved daily summary for ${today}`);
 
       // Check for achievements
-  try {
-    const newAchievements = await achievementService.checkDailyAchievements(
-      new mongoose.Types.ObjectId(userId),
-      dailySummary
-    );
-    
-    if (newAchievements.length > 0) {
-      console.log(`🎉 Earned ${newAchievements.length} achievements!`);
-    }
-  } catch (error) {
-    console.error('Achievement check failed:', error);
-  }
+      try {
+        const newAchievements = await achievementService.checkDailyAchievements(
+          new mongoose.Types.ObjectId(userId),
+          dailySummary
+        );
+
+        if (newAchievements.length > 0) {
+          console.log(`🎉 Earned ${newAchievements.length} achievements!`);
+        }
+      } catch (error) {
+        console.error('Achievement check failed:', error);
+      }
     }
 
     res.json({
@@ -162,8 +162,8 @@ router.get('/dashboard', auth, async (req: Request, res: Response) => {
       userId: user.id,
       date: { $gte: weekAgo.toISOString().split('T')[0] }
     })
-    .sort({ date: 1 })
-    .lean();
+      .sort({ date: 1 })
+      .lean();
 
     // Get activities count
     const totalActivities = await Activity.countDocuments({ userId: user.id });

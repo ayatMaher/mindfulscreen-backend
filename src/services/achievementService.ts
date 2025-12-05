@@ -42,7 +42,7 @@ class AchievementService {
     const totalTime = dailyData.totalTime;
     const socialRatio = dailyData.categories.social / totalTime;
     const productiveRatio = dailyData.categories.productive / totalTime;
-    
+
     if (socialRatio < 0.3 && productiveRatio > 0.4 && !existingTypes.includes('balanced_day')) {
       achievements.push({
         type: 'time_management',
@@ -57,7 +57,7 @@ class AchievementService {
     const firstActivity = await Activity.findOne({ userId })
       .sort({ timestamp: 1 })
       .limit(1);
-    
+
     if (firstActivity) {
       const activityHour = new Date(firstActivity.timestamp).getHours();
       if (activityHour < 9 && !existingTypes.includes('early_bird')) { // Before 9 AM
@@ -95,7 +95,7 @@ class AchievementService {
     // 5. Weekly Streak Achievement
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     const weeklySummaries = await DailySummary.find({
       userId,
       date: { $gte: weekAgo.toISOString().split('T')[0] },
@@ -132,7 +132,7 @@ class AchievementService {
 
   async getAchievementStats(userId: mongoose.Types.ObjectId) {
     const achievements = await Achievement.find({ userId });
-    
+
     const byType = achievements.reduce((acc, ach) => {
       acc[ach.type] = (acc[ach.type] || 0) + 1;
       return acc;

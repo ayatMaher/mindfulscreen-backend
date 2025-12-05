@@ -8,8 +8,8 @@ const router = Router();
 
 // Health check
 router.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'Auth service is healthy',
     timestamp: new Date().toISOString()
   });
@@ -49,10 +49,10 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
+      {
         userId: user.id,
         email: user.email,
-        deviceId: user.deviceId 
+        deviceId: user.deviceId
       },
       config.jwtSecret,
       { expiresIn: config.jwtExpire }
@@ -112,10 +112,10 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
+      {
         userId: user.id,
         email: user.email,
-        deviceId: user.deviceId 
+        deviceId: user.deviceId
       },
       config.jwtSecret,
       { expiresIn: config.jwtExpire }
@@ -140,7 +140,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', auth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
