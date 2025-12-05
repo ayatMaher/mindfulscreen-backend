@@ -6,6 +6,8 @@ import { connectDB } from '../utils/database';
 import authRoutes from '../routes/auth';
 import dataRoutes from '../routes/data';
 import { config } from '../utils/config';
+import achievementRoutes from '../routes/achievements'; 
+
 
 const app = express();
 
@@ -24,7 +26,7 @@ app.use(cors({
 app.use(morgan(config.isProduction ? 'combined' : 'dev')); // Logging
 app.use(express.json({ limit: '10mb' })); // Parse JSON with size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
+app.use('/api/achievements', achievementRoutes);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({

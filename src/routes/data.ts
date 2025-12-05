@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose'; // ADD THIS IMPORT
 import Activity from '../models/Activity';
 import DailySummary from '../models/DailySummary';
+import achievementService from '../services/achievementService';
 import { auth } from '../middleware/auth';
 
 const router = Router();
@@ -93,6 +94,20 @@ router.post('/sync', auth, async (req: Request, res: Response) => {
       );
       savedSummary = true;
       console.log(`✅ Saved daily summary for ${today}`);
+
+      // Check for achievements
+  try {
+    const newAchievements = await achievementService.checkDailyAchievements(
+      new mongoose.Types.ObjectId(userId),
+      dailySummary
+    );
+    
+    if (newAchievements.length > 0) {
+      console.log(`🎉 Earned ${newAchievements.length} achievements!`);
+    }
+  } catch (error) {
+    console.error('Achievement check failed:', error);
+  }
     }
 
     res.json({
